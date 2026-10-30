@@ -1,0 +1,4 @@
+[0.102] openDevice():  Target no device found
+[0.102] initServerContext():  
+Error in initializing ST-LINK device.
+Reason: [0.102] initServerContext():  No device found on target.

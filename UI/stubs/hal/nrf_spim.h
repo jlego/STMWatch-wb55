@@ -1,0 +1,53 @@
+#pragma once
+#include <stdint.h>
+typedef struct {
+  uint32_t POWER;
+  uint32_t CONFIG;
+  uint32_t STATUS;
+  uint32_t ENABLE;
+  uint32_t SCK_POLARITY;
+  uint32_t RX_DYNAMIC_STOP;
+  uint32_t TX_POST_COMMAND;
+  uint32_t RX_POST_COMMAND;
+  uint32_t PSOR;
+  uint32_t DCX;
+  uint32_t CSN_POLARITY;
+  uint32_t MODE;
+  uint32_t BIT_ORDER;
+  uint32_t SCK_DELAY;
+  uint32_t INTENSET;
+  uint32_t INTENCLR;
+  uint32_t TASKS_START;
+  uint32_t TASKS_STOP;
+  uint32_t TASKS_SUSPEND;
+  uint32_t TASKS_RESUME;
+  uint32_t EVENTS_STARTED;
+  uint32_t EVENTS_STOPPED;
+  uint32_t EVENTS_END;
+  uint32_t EVENTS_END_RX;
+  uint32_t EVENTS_END_TX;
+  uint32_t EVENTS_RXSTARTED;
+  uint32_t EVENTS_TXSTARTED;
+  uint32_t EVENTS_MISO;
+  uint32_t PSEL_SCK;
+  uint32_t PSEL_MOSI;
+  uint32_t PSEL_MISO;
+  uint32_t PSEL_DCXN;
+  uint32_t PSEL_CSN;
+  uint32_t RXD_PTR;
+  uint32_t RXD_CNT;
+  uint32_t RXD_OVERREAD;
+  uint32_t RXD_AMOUNT;
+  uint32_t TXD_PTR;
+  uint32_t TXD_CNT;
+  uint32_t TXD_UNDERFLOW;
+  uint32_t TXD_AMOUNT;
+  uint32_t ORC;
+  uint32_t CMD_HEAD;
+  uint32_t CMD_HEAD_DELAY;
+  uint32_t CMD_TAIL;
+  uint32_t CMD_TAIL_DELAY;
+  uint32_t DCX_CANCEL;
+} NRF_SPIM_Type;
+static inline void nrf_spim_task_trigger(NRF_SPIM_Type* p_reg, uint32_t task) { (void)p_reg; (void)task; }
+static inline uint32_t nrf_spim_event_address_get(NRF_SPIM_Type* p_reg, uint32_t event) { (void)p_reg; (void)event; return 0; }

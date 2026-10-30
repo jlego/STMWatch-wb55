@@ -1,0 +1,26 @@
+#ifndef LVGL_STM32_H
+#define LVGL_STM32_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "lvgl/lvgl.h"
+
+void lvgl_init(void);
+void lvgl_tick_handler(uint32_t tick);
+void lvgl_debug_draw(void);
+void lvgl_debug_set_enabled(bool en);
+void lvgl_touch_irq_handler(void);
+void lvgl_touch_release_handler(void);
+void lvgl_touch_process(void);
+uint32_t lvgl_get_spi_err_count(void);
+void lvgl_increment_dwt_counter(void);
+uint32_t lvgl_get_dwt_counter(void);
+uint32_t lvgl_get_dwt_cyccnt(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* LVGL_STM32_H */

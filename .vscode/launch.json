@@ -1,0 +1,50 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "STM32WB55 Debug (OpenOCD)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Debug/STM32WB55.elf",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/Volumes/disk1t/gdb-stlink/arm-none-eabi-gdb",
+            "serverlaunch": false,
+            "launchCompleteCommand": "exec-continue",
+            "setupCommands": [
+                {
+                    "text": "target extended-remote localhost:3333",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "file ${workspaceFolder}/build/Debug/STM32WB55.elf",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "set architecture armv7e-m",
+                    "ignoreFailures": true
+                },
+                {
+                    "text": "monitor reset halt",
+                    "ignoreFailures": true
+                },
+                {
+                    "text": "load",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "monitor arm semihosting enable",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "OpenOCD + Build",
+            "logging": {
+                "engineLogging": true
+            }
+        }
+    ]
+}
