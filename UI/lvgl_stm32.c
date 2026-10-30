@@ -1,7 +1,7 @@
 #include "lvgl_stm32.h"
 #include "infinitime_adapter.h"
 #include "st7789.h"
-#include "ft3168_touch.h"
+#include "cst816s_touch.h"
 #include "stm32wbxx_hal.h"
 #include "stm32wbxx_it.h"
 #include <string.h>
@@ -33,28 +33,6 @@ static inline uint32_t DWT_GetTicks(void)
 
 /* DWT周期转毫秒 - 使用正确的64MHz系统时钟 */
 #define DWT_CYCLES_PER_MS (64000)  /* STM32WB55 PLL配置后SYSCLK=64MHz */
-
-/* 软件延迟函数 - 使用DWT周期计数器，不依赖SysTick */
-static void sw_delay_ms(uint32_t ms)
-{
-    if (!dwt_working) {
-        /* 如果DWT不工作，使用简单的软件循环 */
-        volatile uint32_t count = ms * 10000;
-        while (count--) {
-            __NOP();
-        }
-        return;
-    }
-    
-    uint32_t start = DWT->CYCCNT;
-    uint32_t target_cycles = ms * DWT_CYCLES_PER_MS;
-    
-    /* 等待直到达到目标周期数 */
-    while ((DWT->CYCCNT - start) < target_cycles) {
-        /* 软件超时：防止DWT溢出或其他问题 */
-        if ((DWT->CYCCNT - start) > 100000000) break; /* 约1.5秒超时 */
-    }
-}
 
 /* 软件超时计数器 - 不依赖DWT */
 static volatile uint32_t sw_timeout_counter = 0;
@@ -388,92 +366,10 @@ static volatile lv_coord_t touch_buf_y = 0;
 static volatile bool touch_buf_pressed = false;
 static volatile uint32_t touch_irq_count = 0;
 static volatile uint32_t touch_read_ok_count = 0;
-static volatile uint8_t ft_raw[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-static volatile uint8_t ft_chip_id = 0xFF;
-static volatile uint8_t ft_vend_id = 0xFF;
-static volatile uint8_t ft_pwr_mode = 0xFF;
-static volatile uint8_t ft_threshold = 0xFF;
-static volatile uint8_t ft_int_mode = 0xFF;
-static bool ft_diag_done = false;
-static volatile uint32_t i2c_err_count = 0;
-
 /* 获取 SPI 错误计数 */
 uint32_t lvgl_get_spi_err_count(void)
 {
     return spi_err_count;
-}
-
-static void i2c_bus_recover(void)
-{
-    extern I2C_HandleTypeDef hi2c1;
-    
-    HAL_I2C_DeInit(&hi2c1);
-    
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    GPIO_InitTypeDef g = {0};
-    g.Pin = GPIO_PIN_6 | GPIO_PIN_7;
-    g.Mode = GPIO_MODE_OUTPUT_OD;
-    g.Pull = GPIO_PULLUP;
-    g.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOB, &g);
-    
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
-    for (int i = 0; i < 18; i++) {
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-        for (volatile int d = 0; d < 100; d++) __NOP();
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
-        for (volatile int d = 0; d < 100; d++) __NOP();
-    }
-    
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
-    for (volatile int d = 0; d < 100; d++) __NOP();
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-    for (volatile int d = 0; d < 100; d++) __NOP();
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
-    for (volatile int d = 0; d < 100; d++) __NOP();
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
-    for (volatile int d = 0; d < 100; d++) __NOP();
-    
-    g.Pin = GPIO_PIN_6 | GPIO_PIN_7;
-    g.Mode = GPIO_MODE_AF_OD;
-    g.Pull = GPIO_PULLUP;
-    g.Speed = GPIO_SPEED_FREQ_HIGH;
-    g.Alternate = GPIO_AF4_I2C1;
-    HAL_GPIO_Init(GPIOB, &g);
-    
-    HAL_I2C_Init(&hi2c1);
-}
-
-static bool i2c_safe_read(uint8_t reg, uint8_t *data, uint16_t len)
-{
-    extern I2C_HandleTypeDef hi2c1;
-    if (hi2c1.State != HAL_I2C_STATE_READY) {
-        i2c_bus_recover();
-        i2c_err_count++;
-    }
-    HAL_StatusTypeDef st = HAL_I2C_Mem_Read(&hi2c1, (0x38 << 1), reg, I2C_MEMADD_SIZE_8BIT, data, len, 50);
-    if (st != HAL_OK) {
-        i2c_bus_recover();
-        i2c_err_count++;
-        return false;
-    }
-    return true;
-}
-
-static bool i2c_safe_write(uint8_t reg, uint8_t val)
-{
-    extern I2C_HandleTypeDef hi2c1;
-    if (hi2c1.State != HAL_I2C_STATE_READY) {
-        i2c_bus_recover();
-        i2c_err_count++;
-    }
-    HAL_StatusTypeDef st = HAL_I2C_Mem_Write(&hi2c1, (0x38 << 1), reg, I2C_MEMADD_SIZE_8BIT, &val, 1, 50);
-    if (st != HAL_OK) {
-        i2c_bus_recover();
-        i2c_err_count++;
-        return false;
-    }
-    return true;
 }
 
 static bool touchpad_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
@@ -537,11 +433,6 @@ void lvgl_init(void)
     touch_indev_drv.read_cb = touchpad_read;
     touch_indev = lv_indev_drv_register(&touch_indev_drv);
     
-    /* 初始时禁用触摸输入，等待触摸中断触发后再启用 */
-    if (touch_indev) {
-        lv_indev_enable(touch_indev, false);
-    }
-    
     /* 创建调试图层 label（在 system layer 上，始终置顶） */
     dbg_label = lv_label_create(lv_disp_get_layer_sys(NULL), NULL);
     lv_obj_set_style_local_text_color(dbg_label, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, lv_color_hex(0x00FF00));
@@ -563,64 +454,41 @@ void lvgl_touch_irq_handler(void)
 void lvgl_touch_release_handler(void)
 {
     touch_buf_pressed = false;
-    if (touch_indev) {
-        lv_indev_enable(touch_indev, false);
-    }
 }
 
 /* 主循环中处理触摸中断标志 - 读取 I2C 并缓存数据 */
 void lvgl_touch_process(void)
 {
-    if (!touch_irq_flag && HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == GPIO_PIN_RESET) {
-        touch_irq_flag = true;
+    bool irq = touch_irq_flag;
+
+    if (!irq && HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == GPIO_PIN_RESET) {
+        irq = true;
         touch_irq_count++;
     }
-    if (!touch_irq_flag) return;
     touch_irq_flag = false;
-    
-    if (!ft_diag_done) {
-        ft_diag_done = true;
-        
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-        sw_delay_ms(30);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
-        sw_delay_ms(160);
-        
-        i2c_safe_read(0xA3, (uint8_t*)&ft_chip_id, 1);
-        i2c_safe_read(0xA8, (uint8_t*)&ft_vend_id, 1);
-        i2c_safe_read(0xA5, (uint8_t*)&ft_pwr_mode, 1);
-        i2c_safe_read(0x80, (uint8_t*)&ft_threshold, 1);
-        i2c_safe_read(0xA4, (uint8_t*)&ft_int_mode, 1);
-        i2c_safe_write(0xA5, 0x00);
-        i2c_safe_write(0x80, 0x05);
-        i2c_safe_write(0xA4, 0x00);
-        i2c_safe_write(0x00, 0x01);
-        sw_delay_ms(50);
-        
-        i2c_safe_read(0xA5, (uint8_t*)&ft_pwr_mode, 1);
-        i2c_safe_read(0x80, (uint8_t*)&ft_threshold, 1);
+
+    /* 中断触发时读取；触摸保持期间限速轮询，保证拖动坐标连续更新 */
+    static uint32_t last_poll = 0;
+    if (!irq && touch_buf_pressed) {
+        uint32_t now = DWT->CYCCNT;
+        if ((now - last_poll) < (5 * DWT_CYCLES_PER_MS)) return;
+        last_poll = now;
+    } else if (irq) {
+        last_poll = DWT->CYCCNT;
+    } else {
+        return;
     }
-    
-    uint8_t raw[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-    if (!i2c_safe_read(0x00, raw, 4)) return;
-    
-    ft_raw[0] = raw[0];
-    ft_raw[1] = raw[1];
-    ft_raw[2] = raw[2];
-    ft_raw[3] = raw[3];
-    
-    uint8_t touch_points = raw[2] & 0x0F;
-    if (touch_points > 0 && touch_points < 0x0F) {
-        uint8_t xy[4] = {0};
-        if (i2c_safe_read(0x03, xy, 4)) {
-            touch_buf_x = ((xy[0] & 0x0F) << 8) | xy[1];
-            touch_buf_y = ((xy[2] & 0x0F) << 8) | xy[3];
-            touch_buf_pressed = true;
-            touch_read_ok_count++;
-            if (touch_indev) {
-                lv_indev_enable(touch_indev, true);
-            }
-        }
+
+    cst816s_touch_info_t info = cst816s_touch_get_info();
+    if (!info.valid) {
+        return;
+    }
+
+    if (info.touching && info.x < LV_HOR_RES_MAX && info.y < LV_VER_RES_MAX) {
+        touch_buf_x = (lv_coord_t)info.x;
+        touch_buf_y = (lv_coord_t)info.y;
+        touch_buf_pressed = true;
+        touch_read_ok_count++;
     } else {
         touch_buf_pressed = false;
     }

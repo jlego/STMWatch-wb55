@@ -123,7 +123,7 @@ UI/lvgl/src/lv_widgets/lv_win.c
 UI/lvgl_stm32.c
 UI/infinitime_adapter.c
 UI/soft_i2c.c
-UI/ft3168_touch.c
+UI/cst816s_touch.c
 ```
 
 ### 3. 原有驱动 (1个文件)
@@ -158,7 +158,7 @@ USE_SOFT_I2C
 
 ## 引脚配置
 
-### FT3168触摸芯片
+### CST816S触摸芯片
 - **INT**: PA3 (中断输入)
 - **RST**: PA2 (复位输出)
 - **SDA**: PB7 (I2C数据)

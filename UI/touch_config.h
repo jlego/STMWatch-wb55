@@ -10,9 +10,9 @@ extern "C" {
 #define TOUCH_CHIP_CST816S  1
 #define TOUCH_CHIP_FT3168   2
 
-/* 默认使用FT6X36 */
+/* 默认使用CST816S */
 #ifndef TOUCH_CHIP_TYPE
-#define TOUCH_CHIP_TYPE     TOUCH_CHIP_FT6X36
+#define TOUCH_CHIP_TYPE     TOUCH_CHIP_CST816S
 #endif
 
 /* 根据配置选择触摸芯片 */

@@ -1,7 +1,7 @@
 #include "infinitime_adapter.h"
 #include "lvgl_stm32.h"
 #include "st7789.h"
-#include "ft3168_touch.h"
+#include "cst816s_touch.h"
 #include "lvgl/lvgl.h"
 #include "stm32wbxx_it.h"
 #include <stdio.h>
@@ -605,7 +605,7 @@ static void create_placeholder_screen(it_screen_t screen) {
 
 void infinitime_ui_init(void)
 {
-    ft3168_touch_init();
+    cst816s_touch_init();
     
     lvgl_init();
     

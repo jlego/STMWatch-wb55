@@ -157,7 +157,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/UI/drivers/UartLogger.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/UI/drivers/UsbCdcLogger.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/UI/drivers/Watchdog.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/UI/ft3168_touch.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UI/cst816s_touch.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/UI/infinitime_adapter.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/UI/lvgl/examples/porting/lv_port_disp_template.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/UI/lvgl/examples/porting/lv_port_fs_template.c"
